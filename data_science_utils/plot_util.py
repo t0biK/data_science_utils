@@ -71,7 +71,7 @@ def plot_categorical(train: pd.DataFrame, test: pd.DataFrame, feature: str, targ
     axes[0].legend(['Train', 'Test']);
 
 
-def heatMap(df, mirror):
+def plot_heat_map(df, mirror):
     # Create Correlation df
     corr = df.corr()
     # Plot figsize
@@ -101,4 +101,22 @@ def heatMap(df, mirror):
         # Apply yticks
         plt.yticks(range(len(corr.columns)), corr.columns)
     # show plot
+    plt.show()
+
+def plot_feature_importances(model, feature_names, n=20):
+    # Calculate feature importances
+    importances = model.feature_importances_
+    # Sort feature importances in descending order
+    indices = np.argsort(importances)[::-1]
+
+    # Rearrange feature names so they match the sorted feature importances
+    names = [feature_names[i] for i in indices]
+
+    # Barplot: Add bars
+    plt.bar(range(n), importances[indices])
+    # Add feature names as x-axis labels
+    plt.xticks(range(n), names, rotation=20, fontsize=8)
+    # Create plot title
+    plt.title("Feature Importances")
+    # Show plot
     plt.show()
