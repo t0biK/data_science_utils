@@ -103,6 +103,7 @@ def plot_heat_map(df, mirror):
     # show plot
     plt.show()
 
+
 def plot_feature_importances(model, feature_names, n=20):
     # Calculate feature importances
     importances = model.feature_importances_
@@ -112,11 +113,13 @@ def plot_feature_importances(model, feature_names, n=20):
     # Rearrange feature names so they match the sorted feature importances
     names = [feature_names[i] for i in indices]
 
+    print(importances)
+
     # Barplot: Add bars
-    plt.bar(range(n), importances[indices])
+    plt.bar(range(n), importances[indices][:n])
     # Add feature names as x-axis labels
     plt.xticks(range(n), names, rotation=20, fontsize=8)
     # Create plot title
     plt.title("Feature Importances")
-    # Show plot
-    plt.show()
+
+    return plt
