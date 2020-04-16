@@ -70,6 +70,52 @@ def plot_categorical(train: pd.DataFrame, test: pd.DataFrame, feature: str, targ
     axes[1].set_title('Train distibution by {} of {} most frequent values'.format(target, values));
     axes[0].legend(['Train', 'Test']);
 
+def plot_categorical(train: pd.DataFrame, test: pd.DataFrame, feature: str, values: int = 5):
+    """
+    Plotting distribution for the selected amount of most frequent values between train and test
+    along with distibution of target
+    :param train (pandas.DataFrame): training set
+    :param test (pandas.DataFrame): testing set
+    :param feature (str): name of the feature
+    :param target (str): name of the target feature
+    :param values (int): amount of most frequest values to look at
+    """
+    df_train = pd.DataFrame(data={feature: train[feature], 'isTest': 0})
+    df_test = pd.DataFrame(data={feature: test[feature], 'isTest': 1})
+    df = pd.concat([df_train, df_test], ignore_index=True)
+    df = df[df[feature].isin(df[feature].value_counts(dropna=False).head(values).index)]
+    fig, axes = plt.subplots(2, 1, figsize=(14, 12))
+    sns.countplot(data=df.fillna('NaN'), x=feature, hue='isTest', ax=axes[0]);
+    axes[0].set_title('Train / Test distibution of {} most frequent values'.format(values));
+    axes[0].legend(['Train', 'Test']);
+
+def plot_categorical(train: pd.DataFrame, test: pd.DataFrame, val: pd.DataFrame, feature: str):
+    """
+    Plotting distribution for the selected amount of most frequent values between train and test
+    along with distibution of target
+    :param train (pandas.DataFrame): training set
+    :param test (pandas.DataFrame): testing set
+    :param feature (str): name of the feature
+    :param target (str): name of the target feature
+    :param values (int): amount of most frequest values to look at
+    """
+    if not train is None:
+        df_train = pd.DataFrame(data={feature: train[feature], 'isTest': 0})
+    if not test is None:
+        df_test = pd.DataFrame(data={feature: test[feature], 'isTest': 1})
+    if not val is None:
+        df_val = pd.DataFrame(data={feature: val[feature], 'isTest': 2})
+    df = pd.concat([df_train, df_test, df_val], ignore_index=True)
+    df = df.fillna('NaN')
+    df_grouped = (df
+                  .groupby('isTest')[feature]
+                  .value_counts(normalize=True)
+                  .rename('percent')
+                  .reset_index())
+    ax = sns.catplot(x=feature, y='percent', hue='isTest', kind='bar', data=df_grouped)
+    plt.title(feature)
+    return ax
+
 
 def plot_heat_map(df, mirror):
     # Create Correlation df

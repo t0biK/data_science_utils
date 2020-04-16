@@ -31,7 +31,7 @@ def get_sub_timeseries(df_x, index, window_start, window_end, identifier):
     return sub_df_x
 
 
-def make_windows(arr, win_size, step_size, lag):
+def make_windows(arr, win_size, step_size, start_window_id=1):
     """
     arr: any 2D array whose columns are distinct variables and
       rows are data records at some timestamp t
@@ -47,11 +47,12 @@ def make_windows(arr, win_size, step_size, lag):
     num_windows = 1 + int((n_records - win_size - remainder) / step_size)
     for k in tqdm(range(num_windows)):
         a = arr[k * step_size:win_size - 1 + k * step_size + 1]
-        b = np.append(a, [[k+1]]*a.shape[0], axis=1)
+        b = np.append(a, [[k + start_window_id]] * a.shape[0], axis=1)
         w_list.append(b)
     return np.concatenate(np.array(w_list), axis=0)
 
-def get_rolling_timeseries(df_x, start_index, lag, window_start, window_end):
+
+def get_rolling_timeseries(df_x, start_index, lag, window_size):
     """
     Extracts all possible sub windows of the given dataframe. It is assumed that the index of the dataframe is
     the default one (reset_index()).
@@ -80,34 +81,32 @@ def get_rolling_timeseries(df_x, start_index, lag, window_start, window_end):
     # first entry is specified entry
     df_x.drop(df_x.head(start_index).index, inplace=True)
 
-    df_x.drop(df_x.tail(lag).index,inplace=True)
-    subwindows = make_windows(df_x.values, window_end-window_start, 1, lag)
+    df_x.drop(df_x.tail(lag).index, inplace=True)
+    subwindows = make_windows(df_x.values, window_size, step_size=1, start_window_id=start_index+lag)
     sub_df_x_comp = pd.DataFrame(subwindows, columns=np.append(df_x.columns.values, 'window_id'))
     sub_df_x_comp = sub_df_x_comp.astype(df_x.dtypes)
     return sub_df_x_comp
 
-def get_columns_to_extract(df_x):
-    cols = df_x.columns.values
-    return cols[(cols!='timestamp')&(cols!='window_id')]
 
 def extract_sub_window(df_x, y, window, start_index, lag, fc_parameters=MinimalFCParameters(), n_jobs=-1):
     from tsfresh import extract_relevant_features
     window_start, window_end = window
-    sub_df_x = get_rolling_timeseries(df_x, start_index, lag, window_start, window_end)
+    sub_df_x = get_rolling_timeseries(df_x, start_index, lag, window_end-window_start)
     if n_jobs == -1:
         n_jobs = multiprocessing.cpu_count()
     print('Remove non target values...')
-    #y = y[y.index.isin(sub_df_x.window_id)]
+    y = y.iloc[start_index + lag:]
+    # y = y[y.index.isin(sub_df_x.window_id)]
     print('Extracting features...')
-    columns_to_extract = get_columns_to_extract(df_x)
-    features = extract_relevant_features(sub_df_x, y, column_id="window_id", column_sort="timestamp", column_value=None, default_fc_parameters=fc_parameters, n_jobs=n_jobs)
-    #features = pd.concat([extracted_features], axis=1)
+    features = extract_relevant_features(sub_df_x, y, column_id="window_id", column_sort="timestamp", column_value=None,
+                                         default_fc_parameters=fc_parameters, n_jobs=n_jobs)
+    # features = pd.concat([extracted_features], axis=1)
     features = features.add_suffix(f"_{window_start}_{window_end}")
     return features
 
 
 def extract_sub_windows(df_x, df_y, window_array, lag, fc_parameters=MinimalFCParameters(), n_jobs=-1):
-    #df_x = df_x.reset_index('timestamp')
+    # df_x = df_x.reset_index('timestamp')
     df_x['timestamp'] = list(range(len(df_x)))
 
     split_func = lambda x: list(map(int, x.split("-")))
@@ -117,6 +116,8 @@ def extract_sub_windows(df_x, df_y, window_array, lag, fc_parameters=MinimalFCPa
     y = df_y.iloc[max_end + lag:]
     y = y.reset_index(drop=True)
     y.index.name = 'window_id'
-    features = [extract_sub_window(df_x.copy(), y.copy(), window, max_end-(window[1]-window[0]), lag, fc_parameters, n_jobs) for window in windows]
+    features = [
+        extract_sub_window(df_x.copy(), y.copy(), window, max_end - (window[1] - window[0]), lag, fc_parameters, n_jobs)
+        for window in windows]
     features = reduce(lambda left, right: pd.merge(left, right, left_index=True, right_index=True, how='inner'),
                       features)
