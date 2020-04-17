@@ -1,7 +1,7 @@
 import setuptools
 setuptools.setup(
     name="data_science_utils", # Replace with your own username
-    version="0.0.1-SNAPSHOT",
+    version="0.0.2-SNAPSHOT",
     author="Tobias Kreiter",
     author_email="",
     description="",
